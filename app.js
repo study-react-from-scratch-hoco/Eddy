@@ -12,12 +12,51 @@ const React = {
         return el;
     },
 };
+const myAppState = [];
+let myAppStateCursor = 0;
+const useState = (initialState) => {
+    // get the cursor for this useState
+    const stateCursor = myAppStateCursor;
+    // Check before setting AppState to initialState (reRender)
+    myAppState[stateCursor] = myAppState[stateCursor] || initialState;
+    console.log(`useState is initialized at cursor ${stateCursor} with value:`, myAppState);
+    const setState = (newState) => {
+        console.log(`setState is called at cursor ${stateCursor} with newState value:`, newState);
+        myAppState[stateCursor] = newState;
+        // Render the UI fresh given state has changed.
+        reRender();
+    };
+    // prepare the cursor for the next state.
+    myAppStateCursor++;
+    console.log(`stateDump`, myAppState);
+    return [myAppState[stateCursor], setState];
+};
+const reRender = () => {
+    console.log('reRender-ing :)');
+    const rootNode = document.getElementById('myapp');
+    // reset/clean whatever is rendered already
+    rootNode.innerHTML = '';
+    // Reset the global state cursor
+    myAppStateCursor = 0;
+    // then render Fresh
+    render(React.createElement(App, null), rootNode);
+};
 // ---- Application ---
 const App = () => {
+    const [name, setName] = useState('Arindam');
+    const [count, setCount] = useState(0);
     return (React.createElement("div", { draggable: true },
-        React.createElement("h2", null, "Hello React!"),
+        React.createElement("h2", null,
+            "Hello ",
+            name,
+            "!"),
         React.createElement("p", null, "I am a pargraph"),
-        React.createElement("input", { type: "text" })));
+        React.createElement("input", { type: "text", value: name, onchange: (e) => setName(e.target.value) }),
+        React.createElement("h2", null,
+            " Counter value: ",
+            count),
+        React.createElement("button", { onclick: () => setCount(count + 1) }, "+1"),
+        React.createElement("button", { onclick: () => setCount(count - 1) }, "-1")));
 };
 // ---- Library --- //
 const render = (el, container) => {
