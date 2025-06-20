@@ -2,7 +2,20 @@
 const React = {
   createElement: (tag, props, ...children) => {
     if (typeof tag === 'function') {
-      return tag(props, ...children);
+      try {
+        return tag(props, ...children);
+      } catch ({ promise, key }) {
+        console.log("promise",promise);
+        console.log("key",key);
+        // Handle when this promise is resolved/rejected.
+        promise.then((value) => {
+          resourceCache[key] = value;
+          reRender();
+        });
+        // We branch off the VirtualDOM here
+        // now this will be immediately be rendered.
+        return { tag: 'h2', props: null, children: ['loading your image'] };
+      }
     }
     const el = {
       tag,
@@ -13,6 +26,15 @@ const React = {
   },
 };
 
+const resourceCache = {};
+const createResource = (asyncTask, key) => {
+  // First check if the key is present in the cache.
+  // if so simply return the cached value.
+  if(resourceCache[key]) return resourceCache[key];
+  throw { promise: asyncTask(), key };
+}
+
+
 
 const myAppState = [];
 let myAppStateCursor = 0;
@@ -21,28 +43,28 @@ const useState = (initialState) => {
   const stateCursor = myAppStateCursor;
   // Check before setting AppState to initialState (reRender)
   myAppState[stateCursor] = myAppState[stateCursor] || initialState;
-  console.log(
-    `useState is initialized at cursor ${stateCursor} with value:`,
-    myAppState
-  );
+  // console.log(
+  //   `useState is initialized at cursor ${stateCursor} with value:`,
+  //   myAppState
+  // );
   const setState = (newState) => {
-    console.log(
-      `setState is called at cursor ${stateCursor} with newState value:`,
-      newState
-    );
+    // console.log(
+    //   `setState is called at cursor ${stateCursor} with newState value:`,
+    //   newState
+    // );
     myAppState[stateCursor] = newState;
     // Render the UI fresh given state has changed.
     reRender();
   };
   // prepare the cursor for the next state.
   myAppStateCursor++;
-  console.log(`stateDump`, myAppState);
+  // console.log(`stateDump`, myAppState);
   return [myAppState[stateCursor], setState];
 };
 
 
 const reRender = () => {
-  console.log('reRender-ing :)');
+  // console.log('reRender-ing :)');
   const rootNode = document.getElementById('myapp');
   // reset/clean whatever is rendered already
   rootNode.innerHTML = '';
@@ -56,6 +78,8 @@ const reRender = () => {
 const App = () => {
   const [name, setName] = useState('Arindam');
   const [count, setCount] = useState(0);
+  const photo1 = createResource(getMyAwesomePic, 'photo1');
+  const photo2 = createResource(getMyAwesomePic, 'photo2');
   return (
     <div draggable>
       <h2>Hello {name}!</h2>
@@ -68,8 +92,19 @@ const App = () => {
       <h2> Counter value: {count}</h2>
       <button onclick={() => setCount(count + 1)}>+1</button>
       <button onclick={() => setCount(count - 1)}>-1</button>
+      <h2>Our Photo Album</h2>
+      <img src={photo1} alt="Photo" />
+      <img src={photo2} alt="Photo" />
     </div>
   );
+};
+
+// ---- Remote API ---- //
+const photoURL = 'https://picsum.photos/200'; 
+const getMyAwesomePic = () => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => resolve(photoURL), 1500);
+  });
 };
 
 
